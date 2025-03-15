@@ -81,9 +81,9 @@ def send_welcome(message):
         # Proceed with main menu if the language is set
         language = user_data[user_id]['language']
         welcome_message = (
-            "Welcome! My name is RiseCoin Bot 🤖! My goal is to help my creators in promoting our coin 🚀 Choose the information that interests you ⬇️:"
+            "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду которая вас интересует ⬇️Welcome! My name is RiseCoin Bot 🤖! My goal is to help my creators in promoting our coin 🚀 Choose the information that interests you ⬇️:"
             if language == "en" else
-            "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду которая вас интересует ⬇️:"
+            "Welcome! My name is RiseCoin Bot 🤖! My goal is to help my creators in promoting our coin 🚀 Choose the information that interests you ⬇️:"
         )
         bot.send_message(message.chat.id, welcome_message, reply_markup=main_menu(user_id, language))
 
@@ -227,7 +227,6 @@ def handle_start(message):
 if __name__ == "__main__":
     print("Bot is running...")
     bot.polling(none_stop=True)
-
 
 
 
