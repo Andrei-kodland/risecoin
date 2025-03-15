@@ -3,7 +3,7 @@ import json
 import os
 
 # Bot Token and Channel Username
-BOT_TOKEN = "7987098857:AAH_nwOlbdn5Sq3VsEML0UqTEAKQyQfEnqE"
+BOT_TOKEN = "7987098857:AAH_nwOlbdn5Sq3VsEML0UqTEAKQyQfEnqE"  # Replace with your bot token
 CHANNEL_USERNAME = "@risetokenblum"  # Replace with your channel username
 
 USER_DATA_FILE = 'user_data.json'
@@ -25,26 +25,32 @@ def save_user_data(user_data):
     except Exception as e:
         print(f"Error saving user data: {e}")  # Debugging line
 
-# Function to create the main menu
+# Function to create the main menu with a referral link option
 def main_menu(user_id, language):
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    
+    # Displaying different buttons based on the language selected
     if language == "en":
         btn1 = telebot.types.InlineKeyboardButton("📜 Plans", callback_data="plans")
         btn2 = telebot.types.InlineKeyboardButton("📅 Release Date", callback_data="release_date")
         btn3 = telebot.types.InlineKeyboardButton("🛒 Buy Token", callback_data="buy_token")
-    else:
+        btn4 = telebot.types.InlineKeyboardButton("🌍 Website", url="https://i.redd.it/ceetrhas51441.jpg")
+        btn5 = telebot.types.InlineKeyboardButton("🌐 Change Language", callback_data="change_language")
+        btn6 = telebot.types.InlineKeyboardButton("🎯 My Referral Link", callback_data="get_referral_link")
+        btn7 = telebot.types.InlineKeyboardButton("📊 My Stat", callback_data="my_stat")  # New button for My Stat
+    else:  # Russian
         btn1 = telebot.types.InlineKeyboardButton("📜 Планы", callback_data="plans")
         btn2 = telebot.types.InlineKeyboardButton("📅 Дата Выпуска", callback_data="release_date")
         btn3 = telebot.types.InlineKeyboardButton("🛒 Покупка Токена", callback_data="buy_token")
+        btn4 = telebot.types.InlineKeyboardButton("🌍 Сайт", url="https://i.redd.it/ceetrhas51441.jpg")
+        btn5 = telebot.types.InlineKeyboardButton("🌐 Изменить Язык", callback_data="change_language")
+        btn6 = telebot.types.InlineKeyboardButton("🎯 Моя Реферальная Ссылка", callback_data="get_referral_link")
+        btn7 = telebot.types.InlineKeyboardButton("📊 Моя Статистика", callback_data="my_stat")  # New button for My Stat
 
-    btn4 = telebot.types.InlineKeyboardButton("🌍 Website", url="https://i.redd.it/ceetrhas51441.jpg")
-    btn5 = telebot.types.InlineKeyboardButton("🎯 Referral Link", callback_data="get_referral_link")
-    btn6 = telebot.types.InlineKeyboardButton("📊 My Stats", callback_data="my_stat")
-    btn7 = telebot.types.InlineKeyboardButton("🌐 Change Language", callback_data="change_language")
     markup.add(btn1, btn2)
     markup.add(btn3, btn4)
     markup.add(btn5, btn6)
-    markup.add(btn7)
+    markup.add(btn7)  # Adding My Stat button to the layout
     return markup
 
 # Function to create the language selection menu
@@ -53,7 +59,7 @@ def language_selection_menu():
     markup.add("English", "Русский")
     return markup
 
-# Handle '/start' command
+# Handle '/start' command and referral link
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_data = load_user_data()
@@ -61,7 +67,7 @@ def send_welcome(message):
 
     # Initialize user data if the user is not in the file
     if user_id not in user_data:
-        user_data[user_id] = {'referred_by': None, 'referral_count': 0, 'language': None}
+        user_data[user_id] = {'referred_by': None, 'referral_count': 0, 'language': None}  # Ensure 'language' key exists
 
     # Ensure 'language' is initialized for the user
     if 'language' not in user_data[user_id]:
@@ -74,7 +80,12 @@ def send_welcome(message):
     else:
         # Proceed with main menu if the language is set
         language = user_data[user_id]['language']
-        bot.send_message(message.chat.id, "Welcome! My name is RiseCoin Bot 🤖! My goal is to help my creators in promoting our coin 🚀 Choose the information that interests you ⬇️:", reply_markup=main_menu(user_id, language))
+        welcome_message = (
+            "Welcome! My name is RiseCoin Bot 🤖! My goal is to help my creators in promoting our coin 🚀 Choose the information that interests you ⬇️:"
+            if language == "en" else
+            "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду которая вас интересует ⬇️:"
+        )
+        bot.send_message(message.chat.id, welcome_message, reply_markup=main_menu(user_id, language))
 
     save_user_data(user_data)  # Ensure the user data is saved
 
@@ -93,69 +104,129 @@ def set_language(message):
     save_user_data(user_data)
 
     # Send main menu after language is set
-    bot.send_message(message.chat.id, "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду, которая вас интересует ⬇️:", reply_markup=main_menu(user_id, user_data[user_id]['language']))
-
-# Handle referral link generation
-@bot.callback_query_handler(func=lambda call: call.data == "get_referral_link")
-def get_referral_link(call):
-    user_data = load_user_data()
-    user_id = str(call.message.chat.id)
-
-    # Generate referral link
-    referral_link = f"https://t.me/risetokenblum?start={user_id}"
     language = user_data[user_id]['language']
+    bot.send_message(message.chat.id, "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду которая вас интересует ⬇️:", reply_markup=main_menu(user_id, language))
 
-    if language == "en":
-        bot.send_message(call.message.chat.id, f"Your referral link: {referral_link}\nShare it with others to earn referral points!")
-    else:
-        bot.send_message(call.message.chat.id, f"Ваша реферальная ссылка: {referral_link}\nПоделитесь ею с другими, чтобы зарабатывать реферальные очки!")
-
-# Handle user joining channel through a referral link
-@bot.channel_post_handler(content_types=['new_chat_members'])
-def handle_new_user_joining(post):
-    user_data = load_user_data()
-
-    # Check if user joined the channel through a referral link
-    for member in post.new_chat_members:
-        user_id = str(member.id)
-        referral_id = None
-
-        # Extract the referral ID from the user that invited them (check if it's in the link)
-        if member.username:
-            referral_id = member.username.split('?start=')[-1]  # Extract referral ID from the link
-
-        if referral_id and referral_id in user_data:
-            # Increment referral count of the user who referred
-            user_data[referral_id]['referral_count'] += 1
-            bot.send_message(user_data[referral_id]['language'], "Congrats! You are a step closer to winning the challenge!")
-            save_user_data(user_data)
-
-# Handle showing stats (how many users they referred)
-@bot.callback_query_handler(func=lambda call: call.data == "my_stat")
-def show_stats(call):
-    user_data = load_user_data()
-    user_id = str(call.message.chat.id)
-
-    referral_count = user_data[user_id]['referral_count']
-    language = user_data[user_id]['language']
-
-    if language == "en":
-        bot.send_message(call.message.chat.id, f"You've invited {referral_count} people to the channel! Keep up the great work!")
-    else:
-        bot.send_message(call.message.chat.id, f"Вы пригласили {referral_count} людей в канал! Продолжайте в том же духе!")
-
-    save_user_data(user_data)  # Save the user data after callback handling
-
-# Handle changing language
+# Handle language change request
 @bot.callback_query_handler(func=lambda call: call.data == "change_language")
 def change_language(call):
+    user_data = load_user_data()
+    user_id = str(call.message.chat.id)
+
+    # Reset the user's language to None
+    user_data[user_id]['language'] = None
+
+    # Save the updated user data
+    save_user_data(user_data)
+
+    # Send the language selection menu again
     bot.send_message(call.message.chat.id, "Please select your language ⬇️/ Пожалуйста, выберите язык ⬇️", reply_markup=language_selection_menu())
+
+# Handle button clicks
+@bot.callback_query_handler(func=lambda call: True)
+def callback_query(call):
+    user_data = load_user_data()
+    user_id = str(call.message.chat.id)
+    language = user_data[user_id]['language']
+
+    if call.data == "plans":
+        bot.answer_callback_query(call.id, "📜 Plans selected!" if language == "en" else "📜 Планы выбраны!")
+        bot.send_message(call.message.chat.id, 
+                         "📜 Our plans are to innovate in the crypto space." if language == "en" 
+                         else "📜 Наши планы - инновации в криптопространстве.")
+    elif call.data == "release_date":
+        bot.answer_callback_query(call.id, "📅 Release date selected!" if language == "en" else "📅 Дата выпуска выбрана!")
+        bot.send_message(call.message.chat.id, 
+                         "📅 The release date will be announced soon!" if language == "en" 
+                         else "📅 Дата выпуска будет объявлена скоро!")
+    elif call.data == "buy_token":
+        bot.answer_callback_query(call.id, "🛒 Steps to buy selected!" if language == "en" else "🛒 Шаги по покупке выбраны!")
+        bot.send_message(call.message.chat.id, 
+                         "🛒 To buy, follow these steps:\n1️⃣ Create a wallet\n2️⃣ Buy tokens\n3️⃣ Hold & trade!" if language == "en" 
+                         else "🛒 Для покупки выполните следующие шаги:\n1️⃣ Создайте кошелек\n2️⃣ Купите токены\n3️⃣ Держите и торгуйте!")
+    elif call.data == "get_referral_link":
+        # Generate referral link
+        referral_link = f"https://t.me/risetokenblum?ref={user_id}"
+
+        bot.answer_callback_query(call.id, "🎯 Your referral link!" if language == "en" else "🎯 Ваша реферальная ссылка!")
+        bot.send_message(call.message.chat.id, 
+                         f"🎯 Share your referral link with others: {referral_link}" if language == "en" 
+                         else f"🎯 Поделитесь вашей реферальной ссылкой с другими: {referral_link}")
+    elif call.data == "my_stat":
+        # Show user their referral count
+        referral_count = user_data[user_id]['referral_count']
+        bot.answer_callback_query(call.id, "📊 Your stat!" if language == "en" else "📊 Ваша статистика!")
+        bot.send_message(call.message.chat.id, 
+                         f"🎯 You have invited {referral_count} person(s)!" if language == "en" 
+                         else f"🎯 Вы пригласили {referral_count} человек(а)!")
+
+# Handle user subscription tracking
+@bot.message_handler(content_types=['text'])
+def check_referral(message):
+    # Check if the message includes a referral parameter
+    if "ref=" in message.text:
+        referrer_id = message.text.split('ref=')[1]
+
+        # Check if user joined the channel
+        try:
+            user_id = str(message.chat.id)
+            chat_member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+
+            if chat_member.status in ["member", "administrator", "creator"]:  # User is subscribed to the channel
+                # Increase the referral count for the referrer
+                user_data = load_user_data()
+                if referrer_id in user_data:
+                    user_data[referrer_id]['referral_count'] += 1
+                    save_user_data(user_data)
+                    
+                    # Send the congratulatory message
+                    language = user_data[referrer_id]['language']
+                    congratulatory_message = (
+                        "Congrats! You are a step closer to winning the challenge!" 
+                        if language == "en" else "Поздравляем! Вы на шаг ближе к победе в челлендже!"
+                    )
+                    bot.send_message(referrer_id, congratulatory_message)
+        except Exception as e:
+            print(f"Error checking subscription or increasing referral count: {e}")
+  # Generate referral link
+        referral_link = f"https://t.me/risetokenblum?start={user_id}"
+        
+        if language == "en":
+            bot.send_message(call.message.chat.id, f"Your referral link: {referral_link}\nShare it with others to earn referral points!")
+        else:
+            bot.send_message(call.message.chat.id, f"Ваша реферальная ссылка: {referral_link}\nПоделитесь ею с другими, чтобы зарабатывать реферальные очки!")
+
+    elif call.data == "my_stat":
+        # Display referral count (stats)
+        referral_count = user_data[user_id]['referral_count']
+        
+        if language == "en":
+            bot.send_message(call.message.chat.id, f"You've invited {referral_count} people to the channel! Keep up the great work!")
+        else:
+            bot.send_message(call.message.chat.id, f"Вы пригласили {referral_count} людей в канал! Продолжайте в том же духе!")
+
+    save_user_data(user_data)  # Ensure the user data is saved
+
+# Handle referral link click and subscription to the channel
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    user_data = load_user_data()
+    user_id = str(message.chat.id)
+
+    # Check if the user clicked the referral link and if the referral_id exists
+    if message.text.startswith('/start'):
+        referral_id = message.text.split('=')[-1]
+        if referral_id and referral_id != user_id:
+            # If the user has a valid referral ID and it is not the same as the current user
+            if referral_id in user_data:
+                user_data[referral_id]['referral_count'] += 1
+                bot.send_message(user_data[referral_id]['language'], "Congrats! You are a step closer to winning the challenge!")
+                save_user_data(user_data)
 
 # Start polling (no webhook involved)
 if __name__ == "__main__":
     print("Bot is running...")
     bot.polling(none_stop=True)
-
 
 
 
