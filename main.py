@@ -32,10 +32,10 @@ def main_menu(user_id):
     referral_link = f"https://t.me/risetokenblum?start={user_id}"
     btn1 = InlineKeyboardButton("📜 Планы", callback_data="планы")
     btn2 = InlineKeyboardButton("📅 Дата Выпуска", callback_data="датавыпускамонеты")
-    btn3 = InlineKeyboardButton("🛒 Покупка Токена", callback_data="каккупитьмонету?")
+    btn3 = InlineKeyboardButton("🛒 Покупка Токена", callback_data="каккупитьмонету?")    
     btn4 = InlineKeyboardButton("🌍 Веб-сайт", url="https://i.redd.it/ceetrhas51441.jpg")  # External link
     btn5 = InlineKeyboardButton(f"🔗 Ваша реферальная ссылка", callback_data="реферальная_ссылка")
-    btn6 = InlineKeyboardButton(f"📊 Моя Статистика", callback_data="статистика_рефералов")  # New button for referral stats
+    btn6 = InlineKeyboardButton(f"📊 Моя Статистика", callback_data="referral_count")  # New button for referral stats
 
     markup.add(btn1, btn2)
     markup.add(btn3, btn4)  # Adding buttons in a new row
@@ -53,6 +53,16 @@ def send_welcome(message):
     if user_id not in user_data:
         user_data[user_id] = {'referred_by': None, 'referral_count': 0}
         save_user_data(user_data)
+
+    # Check if the user was referred by someone else via the referral link
+    referrer_id = message.text.split('start=')[1] if 'start=' in message.text else None
+    if referrer_id:
+        referrer_id = referrer_id.strip()
+        if referrer_id in user_data:
+            user_data[user_id]['referred_by'] = referrer_id  # Track who referred this user
+            user_data[referrer_id]['referral_count'] += 1  # Increment the referrer's count
+            save_user_data(user_data)  # Save data after updating referral count
+            bot.send_message(message.chat.id, "🎉 Вас пригласили! Спасибо, что присоединились!")
 
     # Send welcome message with main menu
     bot.send_message(message.chat.id, "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду которая вас интересует ⬇️:", reply_markup=main_menu(user_id))
@@ -75,7 +85,7 @@ def callback_query(call):
     elif call.data == "реферальная_ссылка":
         bot.answer_callback_query(call.id, "📲 Your referral link copied!")
         bot.send_message(call.message.chat.id, f"📲 Your referral link is: https://t.me/risetokenblum?start={user_id}")
-    elif call.data == "статистика_рефералов":
+    elif call.data == "referral_count":
         # Get the referral count for the user
         referral_count = user_data.get(user_id, {}).get('referral_count', 0)
         bot.answer_callback_query(call.id, "📊 Your referral stats selected!")
@@ -84,21 +94,6 @@ def callback_query(call):
         bot.answer_callback_query(call.id, "❗ Unknown action!")
 
     save_user_data(user_data)
-
-# Handle users joining from a referral link
-@bot.message_handler(commands=['start'])
-def handle_referral(message):
-    user_data = load_user_data()
-    referrer_id = message.text.split('start=')[1] if 'start=' in message.text else None
-
-    if referrer_id:
-        referrer_id = referrer_id.strip()
-        if referrer_id in user_data:
-            # Increment the referral count for the referrer
-            user_data[referrer_id]['статистика_рефералов'] += 1
-            save_user_data(user_data)
-
-            bot.send_message(message.chat.id, "🎉 Вас пригласили! Спасибо, что присоединились!")
 
 # Start polling (no webhook involved)
 if __name__ == "__main__":
