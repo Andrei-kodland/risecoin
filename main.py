@@ -4,7 +4,7 @@ import os
 
 # Bot Token and Channel Username
 BOT_TOKEN = "7987098857:AAH_nwOlbdn5Sq3VsEML0UqTEAKQyQfEnqE"  # Replace with your actual bot token
-CHANNEL_USERNAME = "@risetokenblum"  # Replace with your actual channel username
+CHANNEL_USERNAME = "@risecoinblum"  # Replace with your actual channel username
 
 USER_DATA_FILE = 'user_data.json'
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -63,9 +63,19 @@ def send_welcome(message):
     user_data = load_user_data()
     user_id = str(message.chat.id)
 
+    # Extract referrer ID if present in the command
+    referrer_id = None
+    if len(message.text.split()) > 1:
+        referrer_id = message.text.split()[1]
+
     # Initialize user data if not present
     if user_id not in user_data:
-        user_data[user_id] = {'referred_by': None, 'referral_count': 0, 'language': None}
+        user_data[user_id] = {'referred_by': referrer_id, 'referral_count': 0, 'language': None}
+
+    # If user was referred, update referrer's referral count
+    if referrer_id and referrer_id in user_data:
+        user_data[referrer_id]['referral_count'] += 1
+        save_user_data(user_data)
 
     # If no language is selected, ask user to choose
     if user_data[user_id]['language'] is None:
@@ -99,24 +109,25 @@ def set_language(message):
 
     bot.send_message(message.chat.id, welcome_message, reply_markup=main_menu(user_id, language))
 
-# Handle language change request
-@bot.callback_query_handler(func=lambda call: call.data == "change_language")
-def change_language(call):
+# Handle referral link request
+@bot.callback_query_handler(func=lambda call: call.data == "get_referral_link")
+def get_referral_link(call):
+    user_id = str(call.message.chat.id)
+    referral_link = f"https://t.me/risecoinblum?start={user_id}"
+    bot.send_message(call.message.chat.id, f"🎯 Share your referral link: {referral_link}")
+
+# Handle user statistics
+@bot.callback_query_handler(func=lambda call: call.data == "my_stat")
+def my_stat(call):
     user_data = load_user_data()
     user_id = str(call.message.chat.id)
-
-    # Reset the user's language
-    user_data[user_id]['language'] = None
-    save_user_data(user_data)
-
-    bot.send_message(call.message.chat.id, "Please select your language ⬇️/ Пожалуйста, выберите язык ⬇️", reply_markup=language_selection_menu())
+    referral_count = user_data.get(user_id, {}).get('referral_count', 0)
+    bot.send_message(call.message.chat.id, f"📊 You have invited {referral_count} people!")
 
 # Handle button clicks
-@bot.callback_query_handler(func=lambda call: True)
+@bot.callback_query_handler(func=lambda call: call.data in ["plans", "release_date", "buy_token"])
 def callback_query(call):
-    user_data = load_user_data()
-    user_id = str(call.message.chat.id)
-    language = user_data[user_id]['language']
+    language = load_user_data().get(str(call.message.chat.id), {}).get('language', 'en')
 
     responses = {
         "plans": ("📜 Our plans are to innovate in the crypto space.", "📜 Наши планы - инновации в криптопространстве."),
@@ -124,16 +135,7 @@ def callback_query(call):
         "buy_token": ("🛒 To buy, follow these steps:\n1️⃣ Create a wallet\n2️⃣ Buy tokens\n3️⃣ Hold & trade!", "🛒 Для покупки выполните следующие шаги:\n1️⃣ Создайте кошелек\n2️⃣ Купите токены\n3️⃣ Держите и торгуйте!")
     }
 
-    if call.data in responses:
-        bot.send_message(call.message.chat.id, responses[call.data][0] if language == "en" else responses[call.data][1])
-
-    elif call.data == "get_referral_link":
-        referral_link = f"https://t.me/risetokenblum?start={user_id}"
-        bot.send_message(call.message.chat.id, f"🎯 Share your referral link: {referral_link}" if language == "en" else f"🎯 Поделитесь вашей реферальной ссылкой: {referral_link}")
-
-    elif call.data == "my_stat":
-        referral_count = user_data[user_id].get('referral_count', 0)
-        bot.send_message(call.message.chat.id, f"📊 You have invited {referral_count} people!" if language == "en" else f"📊 Вы пригласили {referral_count} человек!")
+    bot.send_message(call.message.chat.id, responses[call.data][0] if language == "en" else responses[call.data][1])
 
 # Start polling
 if __name__ == "__main__":
