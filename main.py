@@ -41,7 +41,6 @@ def main_menu(user_id, lang):
             ("📜 Планы", "plans"),
             ("📅 Дата выпуска", "release_date"),
             ("🛒 Покупка токена", "buy_token"),
-            ("🌍 Сайт", None, "https://i.redd.it/ceetrhas51441.jpg"),
             ("🌐 Сменить язык", "change_language"),
             ("🎯 Реф ссылка", "get_referral_link"),
             ("📊 Стата", "my_stat")
@@ -50,7 +49,6 @@ def main_menu(user_id, lang):
             ("📜 Plans", "plans"),
             ("📅 Release Date", "release_date"),
             ("🛒 Buy Token", "buy_token"),
-            ("🌍 Website", None, "https://i.redd.it/ceetrhas51441.jpg"),
             ("🌐 Change Language", "change_language"),
             ("🎯 Referral Link", "get_referral_link"),
             ("📊 Stats", "my_stat")
