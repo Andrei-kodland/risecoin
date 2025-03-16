@@ -1,146 +1,279 @@
-import telebot
-import json
 import os
+import json
+import telebot
+from telebot.apihelper import ApiTelegramException
 
-# Bot Token and Channel Username
-BOT_TOKEN = "7987098857:AAH_nwOlbdn5Sq3VsEML0UqTEAKQyQfEnqE"  # Replace with your actual bot token
-CHANNEL_USERNAME = "@risecoinblum"  # Replace with your actual channel username
+# Основные настройки
+BOT_TOKEN = "7987098857:AAH_nwOlbdn5Sq3VsEML0UqTEAKQyQfEnqE"  # Ваш токен бота
+CHANNEL_USERNAME = "@risecoinblum"  # Группа для проверки
+CHANNEL_LINK = "https://t.me/risecoinblum"  # Ссылка на группу
+USER_DATA_FILE = 'user_data.json'  # Файл для хранения данных
 
-USER_DATA_FILE = 'user_data.json'
+# Инициализация бота
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Function to load user data from the file
+# Загрузка данных пользователей
 def load_user_data():
-    if os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, 'r') as file:
-            return json.load(file)
-    return {}
+    try:
+        with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
 
-# Function to save user data to the file
+# Сохранение данных пользователей
 def save_user_data(user_data):
     try:
-        with open(USER_DATA_FILE, 'w') as file:
-            json.dump(user_data, file, indent=4)
+        with open(USER_DATA_FILE, 'w', encoding='utf-8') as file:
+            json.dump(user_data, file, indent=4, ensure_ascii=False)
+        print("Data saved")
     except Exception as e:
-        print(f"Error saving user data: {e}")
+        print(f"Error saving data: {e}")
 
-# Function to create the main menu
-def main_menu(user_id, language):
+# Главное меню
+def main_menu(user_id, lang):
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
-    
-    if language == "en":
-        btn1 = telebot.types.InlineKeyboardButton("📜 Plans", callback_data="plans")
-        btn2 = telebot.types.InlineKeyboardButton("📅 Release Date", callback_data="release_date")
-        btn3 = telebot.types.InlineKeyboardButton("🛒 Buy Token", callback_data="buy_token")
-        btn4 = telebot.types.InlineKeyboardButton("🌍 Website", url="https://i.redd.it/ceetrhas51441.jpg")
-        btn5 = telebot.types.InlineKeyboardButton("🌐 Change Language", callback_data="change_language")
-        btn6 = telebot.types.InlineKeyboardButton("🎯 My Referral Link", callback_data="get_referral_link")
-        btn7 = telebot.types.InlineKeyboardButton("📊 My Stat", callback_data="my_stat")
-    else:  # Russian
-        btn1 = telebot.types.InlineKeyboardButton("📜 Планы", callback_data="plans")
-        btn2 = telebot.types.InlineKeyboardButton("📅 Дата Выпуска", callback_data="release_date")
-        btn3 = telebot.types.InlineKeyboardButton("🛒 Покупка Токена", callback_data="buy_token")
-        btn4 = telebot.types.InlineKeyboardButton("🌍 Сайт", url="https://i.redd.it/ceetrhas51441.jpg")
-        btn5 = telebot.types.InlineKeyboardButton("🌐 Изменить Язык", callback_data="change_language")
-        btn6 = telebot.types.InlineKeyboardButton("🎯 Моя Реферальная Ссылка", callback_data="get_referral_link")
-        btn7 = telebot.types.InlineKeyboardButton("📊 Моя Статистика", callback_data="my_stat")
-
-    markup.add(btn1, btn2)
-    markup.add(btn3, btn4)
-    markup.add(btn5, btn6)
-    markup.add(btn7)
+    buttons = {
+        "ru": [
+            ("📜 Планы", "plans"),
+            ("📅 Дата выпуска", "release_date"),
+            ("🛒 Покупка токена", "buy_token"),
+            ("🌍 Сайт", None, "https://i.redd.it/ceetrhas51441.jpg"),
+            ("🌐 Сменить язык", "change_language"),
+            ("🎯 Реф ссылка", "get_referral_link"),
+            ("📊 Стата", "my_stat")
+        ],
+        "en": [
+            ("📜 Plans", "plans"),
+            ("📅 Release Date", "release_date"),
+            ("🛒 Buy Token", "buy_token"),
+            ("🌍 Website", None, "https://i.redd.it/ceetrhas51441.jpg"),
+            ("🌐 Change Language", "change_language"),
+            ("🎯 Referral Link", "get_referral_link"),
+            ("📊 Stats", "my_stat")
+        ]
+    }
+    for text, callback, *url in buttons[lang]:
+        btn = telebot.types.InlineKeyboardButton(text, url=url[0] if url else None, callback_data=callback if not url else None)
+        markup.add(btn) if url else markup.add(btn, row_width=2)
     return markup
 
-# Function to create the language selection menu
+# Меню выбора языка
 def language_selection_menu():
     markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    markup.add("English", "Русский")
+    markup.add("Русский", "English")
     return markup
 
-# Handle '/start' command
+# Обработка команды /start
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_data = load_user_data()
     user_id = str(message.chat.id)
+    ref_id = message.text.split()[1] if len(message.text.split()) > 1 else None
+    if ref_id == user_id or ref_id not in user_data:
+        ref_id = None
 
-    # Extract referrer ID if present in the command
-    referrer_id = None
-    if len(message.text.split()) > 1:
-        referrer_id = message.text.split()[1]
-
-    # Initialize user data if not present
-    if user_id not in user_data:
-        user_data[user_id] = {'referred_by': referrer_id, 'referral_count': 0, 'language': None}
-
-    # If user was referred, update referrer's referral count
-    if referrer_id and referrer_id in user_data:
-        user_data[referrer_id]['referral_count'] += 1
+    if user_id not in user_data or ref_id:
+        user_data[user_id] = {
+            'username': None,
+            'referred_by': ref_id,
+            'referral_count': user_data.get(user_id, {}).get('referral_count', 0),
+            'referrals': user_data.get(user_id, {}).get('referrals', []),
+            'language': None,
+            'processed_referral': user_data.get(user_id, {}).get('processed_referral', None),
+            'is_new': True
+        }
+        bot.send_message(user_id, "Введи свой ник, чтобы начать!\nEnter your nickname to start!")
         save_user_data(user_data)
+        return
 
-    # If no language is selected, ask user to choose
-    if user_data[user_id]['language'] is None:
-        bot.send_message(message.chat.id, "Please select your language ⬇️/ Пожалуйста, выберите язык ⬇️", reply_markup=language_selection_menu())
+
+    lang = user_data[user_id].get('language', 'ru')
+    if not user_data[user_id]['username']:
+        bot.send_message(user_id, "Введи свой ник, чтобы начать!\nEnter your nickname to start!")
+    elif not user_data[user_id]['language']:
+        bot.send_message(user_id, "Выбери язык ⬇️\nSelect language ⬇️", reply_markup=language_selection_menu())
+    elif user_data[user_id].get('is_new', False):
+        msg = f"Подпишись на группу {CHANNEL_LINK}, чтобы завершить регистрацию!" if lang == "ru" else f"Join our group {CHANNEL_LINK} to complete registration!"
+        bot.send_message(user_id, msg)
+        markup = telebot.types.InlineKeyboardMarkup()
+        text = "Проверить подписку" if lang == "ru" else "Check subscription"
+        markup.add(telebot.types.InlineKeyboardButton(text, callback_data="check_subscription"))
+        bot.send_message(user_id, "После подписки жми сюда:\nClick after joining:", reply_markup=markup)
     else:
-        language = user_data[user_id]['language']
-        welcome_message = (
-            "Welcome! My name is RiseCoin Bot 🤖! My goal is to help my creators in promoting our coin 🚀 Choose the information that interests you ⬇️:"
-            if language == "en" else
-            "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду которая вас интересует ⬇️:"
-        )
-        bot.send_message(message.chat.id, welcome_message, reply_markup=main_menu(user_id, language))
+        msg = "С возвращением! Выбери что хочешь ⬇️" if lang == "ru" else "Welcome back! Pick what you want ⬇️"
+        bot.send_message(user_id, msg, reply_markup=main_menu(user_id, lang))
+
+# Установка ника
+@bot.message_handler(func=lambda msg: str(msg.chat.id) in load_user_data() and load_user_data()[str(msg.chat.id)]['username'] is None)
+def set_nickname(msg):
+    user_data = load_user_data()
+    user_id = str(msg.chat.id)
+    nick = msg.text.strip()
+
+    if len(nick) < 3 or len(nick) > 20 or not nick.isalnum():
+        bot.send_message(user_id, "Ник от 3 до 20 символов, только буквы и цифры!\nNickname 3-20 chars, letters and numbers only!")
+        return
+
+    user_data[user_id]['username'] = nick
+    bot.send_message(user_id, "Ник готов! Выбери язык ⬇️\nNickname set! Pick language ⬇️", reply_markup=language_selection_menu())
+    save_user_data(user_data)
+
+# Выбор языка
+@bot.message_handler(func=lambda msg: msg.text in ["Русский", "English"])
+def set_language(msg):
+    user_data = load_user_data()
+    user_id = str(msg.chat.id)
+
+    if not user_data[user_id]['username']:
+        bot.send_message(user_id, "Сначала ник выбери!\nSet nickname first!")
+        return
+
+    user_data[user_id]['language'] = "ru" if msg.text == "Русский" else "en"
+    lang = user_data[user_id]['language']
+
+    if lang == "en":
+        bot.send_message(user_id, "The language is English, everything will be shown in this language.")
+    else:
+        bot.send_message(user_id, "Язык установлен на русский, все будет на этом языке.")
+
+    if user_data[user_id].get('is_new'):
+        msg = f"Подпишись на группу {CHANNEL_LINK} для завершения!" if lang == "ru" else f"Join our group {CHANNEL_LINK} to finish registration!"
+        bot.send_message(user_id, msg)
+        markup = telebot.types.InlineKeyboardMarkup()
+        text = "Проверить" if lang == "ru" else "Check"
+        markup.add(telebot.types.InlineKeyboardButton(text, callback_data="check_subscription"))
+        bot.send_message(user_id, "Жми после подписки:\nClick after joining:", reply_markup=markup)
+    else:
+        msg = "Привет! Я RiseCoin Bot 🤖 Помогаю продвигать монету 🚀 Выбери что надо ⬇️" if lang == "ru" else "Hey! I’m RiseCoin Bot 🤖 Here to promote our coin 🚀 Pick something ⬇️"
+        bot.send_message(user_id, msg, reply_markup=main_menu(user_id, lang))
 
     save_user_data(user_data)
 
-# Handle language selection
-@bot.message_handler(func=lambda message: message.text in ["English", "Русский"])
-def set_language(message):
+# Проверка подписки
+@bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
+def check_subscription(call):
     user_data = load_user_data()
-    user_id = str(message.chat.id)
+    user_id = str(call.message.chat.id)
 
-    user_data[user_id]['language'] = "en" if message.text == "English" else "ru"
+    if not user_data[user_id]['username']:
+        text = "Сначала ник!\nNickname first!" if user_data[user_id].get('language', 'ru') == "ru" else "Nickname first!"
+        bot.send_message(user_id, text)
+        bot.answer_callback_query(call.id)
+        return
+
+    if not user_data[user_id]['language']:
+        text = "Выбери язык сначала!\nPick language first!" if user_data[user_id].get('language', 'ru') == "ru" else "Pick language first!"
+        bot.send_message(user_id, text)
+        bot.answer_callback_query(call.id)
+        return
+
+
+    lang = user_data[user_id]['language']
+    try:
+        member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        if member.status in ["member", "administrator", "creator"]:
+            user_data[user_id]['is_new'] = False
+
+            # Реферальная логика
+            ref_id = user_data[user_id]['referred_by']
+            if ref_id and user_data[user_id]['processed_referral'] != ref_id:
+                user_data[ref_id]['referral_count'] = user_data[ref_id].get('referral_count', 0) + 1
+                user_data[ref_id]['referrals'] = user_data[ref_id].get('referrals', []) + [user_id]
+                user_data[user_id]['processed_referral'] = ref_id
+                bot.send_message(ref_id, f"Круто! @{user_data[user_id]['username']} пришел по твоей ссылке!" if lang == "ru" else f"Cool! @{user_data[user_id]['username']} joined via your link!")
+
+            msg = "Добро пожаловать! Я RiseCoin Bot 🤖 Тут для продвижения монеты 🚀 Выбери что хочешь ⬇️" if lang == "ru" else "Welcome! I’m RiseCoin Bot 🤖 Helping promote our coin 🚀 Pick something ⬇️"
+            bot.send_message(user_id, msg, reply_markup=main_menu(user_id, lang))
+            bot.answer_callback_query(call.id, "Готово!" if lang == "ru" else "Done!")
+        else:
+            bot.answer_callback_query(call.id, "Подпишись сначала!" if lang == "ru" else "Join first!")
+    except ApiTelegramException as e:
+        print(f"Subscription check error: {e}")
+        if e.error_code == 400 and "chat not found" in str(e):
+            text = f"Группа {CHANNEL_USERNAME} не найдена! Пиши в поддержку!" if lang == "ru" else f"Group {CHANNEL_USERNAME} not found! Contact support!"
+            bot.answer_callback_query(call.id, text)
+        else:
+            bot.answer_callback_query(call.id, "Ошибка, попробуй еще!" if lang == "ru" else "Error, try again!")
     save_user_data(user_data)
 
-    language = user_data[user_id]['language']
-    welcome_message = (
-        "Welcome! My name is RiseCoin Bot 🤖! My goal is to help my creators in promoting our coin 🚀 Choose the information that interests you ⬇️:"
-        if language == "en" else
-        "Добро Пожаловать! Меня зовут RiseCoin Bot 🤖! Моя цель - помочь создателям в продвижении монеты 🚀 Выберите команду которая вас интересует ⬇️:"
-    )
-
-    bot.send_message(message.chat.id, welcome_message, reply_markup=main_menu(user_id, language))
-
-# Handle referral link request
-@bot.callback_query_handler(func=lambda call: call.data == "get_referral_link")
-def get_referral_link(call):
-    user_id = str(call.message.chat.id)
-    referral_link = f"https://t.me/risecoinblum?start={user_id}"
-    bot.send_message(call.message.chat.id, f"🎯 Share your referral link: {referral_link}")
-
-# Handle user statistics
-@bot.callback_query_handler(func=lambda call: call.data == "my_stat")
-def my_stat(call):
+# Смена языка
+@bot.callback_query_handler(func=lambda call: call.data == "change_language")
+def change_language(call):
     user_data = load_user_data()
     user_id = str(call.message.chat.id)
-    referral_count = user_data.get(user_id, {}).get('referral_count', 0)
-    bot.send_message(call.message.chat.id, f"📊 You have invited {referral_count} people!")
+    lang = user_data[user_id]['language']
+    user_data[user_id]['language'] = None
+    save_user_data(user_data)
+    msg = "Выбери язык ⬇️\nSelect language ⬇️" if lang == "ru" else "Select language ⬇️"
+    bot.send_message(user_id, msg, reply_markup=language_selection_menu())
+    bot.answer_callback_query(call.id)
 
-# Handle button clicks
-@bot.callback_query_handler(func=lambda call: call.data in ["plans", "release_date", "buy_token"])
+# Обработка остальных callback-запросов
+@bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    language = load_user_data().get(str(call.message.chat.id), {}).get('language', 'en')
+    user_data = load_user_data()
+    user_id = str(call.message.chat.id)
+
+    if not user_data[user_id]['username']:
+        text = "Сначала ник!\nNickname first!" if user_data[user_id].get('language', 'ru') == "ru" else "Nickname first!"
+        bot.send_message(user_id, text)
+        bot.answer_callback_query(call.id)
+        return
+
+    if not user_data[user_id]['language']:
+        text = "Выбери язык!\nPick language!" if user_data[user_id].get('language', 'ru') == "ru" else "Pick language!"
+        bot.send_message(user_id, text)
+        bot.answer_callback_query(call.id)
+        return
+
+    lang = user_data[user_id]['language']
+    if user_data[user_id].get('is_new') and call.data != "check_subscription":
+        msg = f"Подпишись на {CHANNEL_LINK} и проверь!\nJoin {CHANNEL_LINK} and check!" if lang == "ru" else f"Join {CHANNEL_LINK} and check!"
+        bot.send_message(user_id, msg)
+        markup = telebot.types.InlineKeyboardMarkup()
+        text = "Проверить" if lang == "ru" else "Check"
+        markup.add(telebot.types.InlineKeyboardButton(text, callback_data="check_subscription"))
+        bot.send_message(user_id, "Жми после:\nClick after:" if lang == "ru" else "Click after:", reply_markup=markup)
+        bot.answer_callback_query(call.id)
+        return
+
 
     responses = {
-        "plans": ("📜 Our plans are to innovate in the crypto space.", "📜 Наши планы - инновации в криптопространстве."),
-        "release_date": ("📅 The release date will be announced soon!", "📅 Дата выпуска будет объявлена скоро!"),
-        "buy_token": ("🛒 To buy, follow these steps:\n1️⃣ Create a wallet\n2️⃣ Buy tokens\n3️⃣ Hold & trade!", "🛒 Для покупки выполните следующие шаги:\n1️⃣ Создайте кошелек\n2️⃣ Купите токены\n3️⃣ Держите и торгуйте!")
+        "plans": "📜 Планы - инновации в крипте." if lang == "ru" else "📜 Plans - crypto innovations.",
+        "release_date": "📅 Скоро объявим дату!" if lang == "ru" else "📅 Release date coming soon!",
+        "buy_token": "🛒 Шаги:\n1️⃣ Кошелек\n2️⃣ Покупка\n3️⃣ Держи и торгуй!" if lang == "ru" else "🛒 Steps:\n1️⃣ Wallet\n2️⃣ Buy\n3️⃣ Hold & trade!"
     }
 
-    bot.send_message(call.message.chat.id, responses[call.data][0] if language == "en" else responses[call.data][1])
+    if call.data in responses:
+        bot.send_message(user_id, responses[call.data])
+        bot.answer_callback_query(call.id)
+    elif call.data == "get_referral_link":
+        link = f"https://t.me/{bot.get_me().username}?start={user_id}"
+        msg = f"🎯 Твоя ссылка: {link}" if lang == "ru" else f"🎯 Your referral link: {link}"
+        bot.send_message(user_id, msg)
+        bot.answer_callback_query(call.id)
+    elif call.data == "my_stat":
+        refs = user_data[user_id].get('referral_count', 0)
+        ref_by = user_data[user_id].get('referred_by')
+        ref_by_name = user_data.get(ref_by, {}).get('username', 'Никто' if lang == "ru" else 'Nobody') if ref_by else ('Никто' if lang == "ru" else 'Nobody')
+        stats = f"📊 Пригласил: {refs} чел.\nТебя позвал: @{ref_by_name}" if lang == "ru" else f"📊 Invited: {refs} people.\nInvited by: @{ref_by_name}"
+        bot.send_message(user_id, stats)
+        bot.answer_callback_query(call.id)
 
-# Start polling
+# Запуск бота
 if __name__ == "__main__":
-    print("Bot is running...")
-    bot.polling(none_stop=True)
+    print("Bot started...")
+    try:
+        bot.polling(none_stop=True)
+    except ApiTelegramException as e:
+        if e.error_code == 409:
+            print("Conflict: Another bot instance is running. Stop it.")
+        else:
+            print(f"Telegram API error: {e}")
+        save_user_data(load_user_data())
+    except Exception as e:
+        print(f"Something went wrong: {e}")
+        save_user_data(load_user_data())
 
 
 
