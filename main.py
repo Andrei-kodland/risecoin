@@ -41,6 +41,7 @@ def main_menu(user_id, lang):
             ("📜 Планы", "plans"),
             ("📅 Дата выпуска", "release_date"),
             ("🛒 Покупка токена", "buy_token"),
+            
             ("🌐 Сменить язык", "change_language"),
             ("🎯 Реф ссылка", "get_referral_link"),
             ("📊 Стата", "my_stat")
@@ -49,6 +50,7 @@ def main_menu(user_id, lang):
             ("📜 Plans", "plans"),
             ("📅 Release Date", "release_date"),
             ("🛒 Buy Token", "buy_token"),
+            
             ("🌐 Change Language", "change_language"),
             ("🎯 Referral Link", "get_referral_link"),
             ("📊 Stats", "my_stat")
@@ -84,7 +86,7 @@ def send_welcome(message):
             'processed_referral': user_data.get(user_id, {}).get('processed_referral', None),
             'is_new': True
         }
-        bot.send_message(user_id, "Введи свой ник, чтобы начать!👊 \nEnter your nickname to start!")
+        bot.send_message(user_id, "Введи свой ник, чтобы начать!\nEnter your nickname to start!")
         save_user_data(user_data)
         return
 
@@ -146,7 +148,7 @@ def set_language(msg):
         markup.add(telebot.types.InlineKeyboardButton(text, callback_data="check_subscription"))
         bot.send_message(user_id, "Жми после подписки:\nClick after joining:", reply_markup=markup)
     else:
-        msg = "Привет! Я RiseCoin Bot 🤖 Помогаю продвигать монету 🚀 Выбери что надо ⬇️" if lang == "ru" else "Hello! My name is RiseCoin Bot 🤖 I help my creators in promoting our coin 🚀 Choose the line that interests you ⬇️"
+        msg = "Привет! Я RiseCoin Bot 🤖 Помогаю продвигать монету 🚀 Выбери что надо ⬇️" if lang == "ru" else "Hey! I’m RiseCoin Bot 🤖 Here to promote our coin 🚀 Pick something ⬇️"
         bot.send_message(user_id, msg, reply_markup=main_menu(user_id, lang))
 
     save_user_data(user_data)
@@ -187,7 +189,7 @@ def check_subscription(call):
                 except ApiTelegramException as e:
                     print(f"Failed to notify referrer {ref_id}: {e}")
 
-            msg = "Привет! Меня зовут RiseCoin Bot 🤖 Я помогаю своим создателям продвигать монету 🚀 Выбери команду которая заинтересовала ⬇️" if lang == "ru" else "Welcome! I’m RiseCoin Bot 🤖 Helping promote our coin 🚀 Pick something ⬇️"
+            msg = "Добро пожаловать! Я RiseCoin Bot 🤖 Тут для продвижения монеты 🚀 Выбери что хочешь ⬇️" if lang == "ru" else "Welcome! I’m RiseCoin Bot 🤖 Helping promote our coin 🚀 Pick something ⬇️"
             bot.send_message(user_id, msg, reply_markup=main_menu(user_id, lang))
             bot.answer_callback_query(call.id, "Готово!" if lang == "ru" else "Done!")
         else:
@@ -254,14 +256,14 @@ def callback_query(call):
         bot.answer_callback_query(call.id)
     elif call.data == "get_referral_link":
         link = f"https://t.me/{bot.get_me().username}?start={user_id}"
-        msg = f"🎯 Ваша реферальная ссылка: {link}" if lang == "ru" else f"🎯 Your referral link: {link}"
+        msg = f"🎯 Твоя ссылка: {link}" if lang == "ru" else f"🎯 Your referral link: {link}"
         bot.send_message(user_id, msg)
         bot.answer_callback_query(call.id)
     elif call.data == "my_stat":
         refs = user_data[user_id].get('referral_count', 0)
         ref_by = user_data[user_id].get('referred_by')
         ref_by_name = user_data.get(ref_by, {}).get('username', 'Никто' if lang == "ru" else 'Nobody') if ref_by else ('Никто' if lang == "ru" else 'Nobody')
-        stats = f"📊 Вы Пригласили: {refs} чел.\nТебя позвал: @{ref_by_name}" if lang == "ru" else f"📊 You Invited: {refs} people.\nInvited by: @{ref_by_name}"
+        stats = f"📊 Пригласил: {refs} чел.\nТебя позвал: @{ref_by_name}" if lang == "ru" else f"📊 Invited: {refs} people.\nInvited by: @{ref_by_name}"
         bot.send_message(user_id, stats)
         bot.answer_callback_query(call.id)
 
@@ -280,7 +282,6 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         save_user_data(load_user_data())
-
 
 
 
