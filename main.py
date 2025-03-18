@@ -9,6 +9,9 @@ CHANNEL_USERNAME = "@risecoinblum"
 CHANNEL_LINK = "https://t.me/risecoinblum"
 USER_DATA_FILE = 'user_data.json'
 
+# Ваш Telegram user ID или username
+YOUR_USER_ID = "2083730569"  # или используйте свой user_id, если у вас его нет
+
 # Инициализация бота
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -41,7 +44,6 @@ def main_menu(user_id, lang):
             ("📜 Планы", "plans"),
             ("📅 Дата выпуска", "release_date"),
             ("🛒 Покупка токена", "buy_token"),
-            
             ("🌐 Сменить язык", "change_language"),
             ("🎯 Реф ссылка", "get_referral_link"),
             ("📊 Стата", "my_stat")
@@ -50,7 +52,6 @@ def main_menu(user_id, lang):
             ("📜 Plans", "plans"),
             ("📅 Release Date", "release_date"),
             ("🛒 Buy Token", "buy_token"),
-            
             ("🌐 Change Language", "change_language"),
             ("🎯 Referral Link", "get_referral_link"),
             ("📊 Stats", "my_stat")
@@ -89,7 +90,6 @@ def send_welcome(message):
         bot.send_message(user_id, "Введи свой ник, чтобы начать!\nEnter your nickname to start!")
         save_user_data(user_data)
         return
-
 
     lang = user_data[user_id].get('language', 'ru')
     if user_data[user_id].get('username') is None:
@@ -141,7 +141,7 @@ def set_language(msg):
         bot.send_message(user_id, "Язык установлен на русский, все будет на этом языке.")
 
     if user_data[user_id].get('is_new'):
-        msg = f"Подпишись на группу {CHANNEL_LINK} для завершения!" if lang == "ru" else f"Join our group {CHANNEL_LINK} to finish registration!"
+        msg = f"Подпишись на группу {CHANNEL_LINK} для завершения!" if lang == "ru" else f"Join our group {CHANNEL_LINK} to finish!"
         bot.send_message(user_id, msg)
         markup = telebot.types.InlineKeyboardMarkup()
         text = "Проверить" if lang == "ru" else "Check"
@@ -165,12 +165,11 @@ def check_subscription(call):
         bot.answer_callback_query(call.id)
         return
 
-
     if not user_data[user_id]['language']:
         text = "Выбери язык сначала!\nPick language first!" if user_data[user_id].get('language', 'ru') == "ru" else "Pick language first!"
         bot.send_message(user_id, text)
         bot.answer_callback_query(call.id)
-        return                                  
+        return                                   
 
     lang = user_data[user_id]['language']
     try:
@@ -215,57 +214,28 @@ def change_language(call):
     bot.send_message(user_id, msg, reply_markup=language_selection_menu())
     bot.answer_callback_query(call.id)
 
-# Обработка остальных callback-запросов
-@bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
-    user_data = load_user_data()
-    user_id = str(call.message.chat.id)
-
-    if user_data[user_id].get('username') is None:
-        text = "Сначала ник!\nNickname first!" if user_data[user_id].get('language', 'ru') == "ru" else "Nickname first!"
-        bot.send_message(user_id, text)
-        bot.answer_callback_query(call.id)
-        return
-
-    if not user_data[user_id]['language']:
-        text = "Выбери язык!\nPick language!" if user_data[user_id].get('language', 'ru') == "ru" else "Pick language!"
-        bot.send_message(user_id, text)
-        bot.answer_callback_query(call.id)
-        return
-
-
-    lang = user_data[user_id]['language']
-    if user_data[user_id].get('is_new') and call.data != "check_subscription":
-        msg = f"Подпишись на {CHANNEL_LINK} и проверь!\nJoin {CHANNEL_LINK} and check!" if lang == "ru" else f"Join {CHANNEL_LINK} and check!"
-        bot.send_message(user_id, msg)
-        markup = telebot.types.InlineKeyboardMarkup()
-        text = "Проверить" if lang == "ru" else "Check"
-        markup.add(telebot.types.InlineKeyboardButton(text, callback_data="check_subscription"))
-        bot.send_message(user_id, "Жми после:\nClick after:" if lang == "ru" else "Click after:", reply_markup=markup)
-        bot.answer_callback_query(call.id)
-        return                                     
-
-    responses = {
-        "plans": "📜 Планы - инновации в крипте." if lang == "ru" else "📜 Plans - crypto innovations.",
-        "release_date": "📅 Скоро объявим дату!" if lang == "ru" else "📅 Release date coming soon!",
-        "buy_token": "🛒 Шаги:\n1️⃣ Кошелек\n2️⃣ Покупка\n3️⃣ Держи и торгуй!" if lang == "ru" else "🛒 Steps:\n1️⃣ Wallet\n2️⃣ Buy\n3️⃣ Hold & trade!"
-    }
-
-    if call.data in responses:
-        bot.send_message(user_id, responses[call.data])
-        bot.answer_callback_query(call.id)
-    elif call.data == "get_referral_link":
-        link = f"https://t.me/{bot.get_me().username}?start={user_id}"
-        msg = f"🎯 Твоя ссылка: {link}" if lang == "ru" else f"🎯 Your referral link: {link}"
-        bot.send_message(user_id, msg)
-        bot.answer_callback_query(call.id)
-    elif call.data == "my_stat":
-        refs = user_data[user_id].get('referral_count', 0)
-        ref_by = user_data[user_id].get('referred_by')
-        ref_by_name = user_data.get(ref_by, {}).get('username', 'Никто' if lang == "ru" else 'Nobody') if ref_by else ('Никто' if lang == "ru" else 'Nobody')
-        stats = f"📊 Пригласил: {refs} чел.\nТебя позвал: @{ref_by_name}" if lang == "ru" else f"📊 Invited: {refs} people.\nInvited by: @{ref_by_name}"
-        bot.send_message(user_id, stats)
-        bot.answer_callback_query(call.id)
+# Обработка фотографии
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    user_id = str(message.chat.id)
+    
+    # Получаем ID фотографии
+    photo_id = message.photo[-1].file_id  # Скачиваем самое большое изображение (в photo list есть несколько вариантов)
+    
+    # Получаем файл фотографии
+    file_info = bot.get_file(photo_id)
+    file_url = f'https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}'
+    
+    # Отправляем фото на ваш аккаунт
+    try:
+        # Forward the photo to your admin (without sending user ID to the user)
+        bot.forward_message(YOUR_USER_ID, user_id, message.message_id)
+        
+        # Send confirmation message to the user
+        bot.send_message(user_id, "Your photo has been sent to the admin.")
+    except ApiTelegramException as e:
+        print(f"Failed to forward photo: {e}")
+        bot.send_message(user_id, "There was an error sending the photo to the admin. Please try again later.")
 
 # Запуск бота
 if __name__ == "__main__":
